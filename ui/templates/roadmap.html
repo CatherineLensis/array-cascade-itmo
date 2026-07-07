@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+{% block title %}Дорожная карта — Array Cascade{% endblock %}
+
+{% block content %}
+
+<section style="margin-bottom: 24px;">
+  <div class="panel-label blue">План работ</div>
+  <h1>Дорожная карта магистратуры</h1>
+  <p style="max-width: 760px;">
+    Два года, четыре семестра: от синтетического baseline до сенсорного MVP
+    и публикации Q1. Спринт заявки (июнь–июль 2026) даёт работающее ядро,
+    магистратура закрывает gap synth → real, добавляет трекер и сенсорный fusion.
+  </p>
+</section>
+
+<!-- Сейчас vs магистратура -->
+<section style="margin-bottom: 18px;">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="panel">
+      <div class="panel-label blue">Сейчас · спринт заявки (1,5 недели)</div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">
+        Universal cascade + demo + counter-UAV baseline
+      </div>
+      <ul style="margin: 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>Universal cascade на двух доменах</li>
+        <li>Синтетический генератор counter-UAV</li>
+        <li>Демонстрация для жюри</li>
+        <li>Текст заявки ИТМО</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="panel-label green">Магистратура · 4 семестра</div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">
+        От baseline до MVP и Q1-публикации
+      </div>
+      <ul style="margin: 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>Валидация на реальных открытых датасетах</li>
+        <li>Трекер IMM + JPDA</li>
+        <li>Сенсорный fusion (RF + acoustic)</li>
+        <li>Прототип сенсор-ноды</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- Семестры -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Четыре семестра</div>
+  <h2 style="margin-bottom: 18px;">Содержание по этапам</h2>
+
+  {% for sem in [
+    ("1", "Осень 2026", "Micro-Doppler и реальные данные",
+     "Расширение каскада второй модальностью (спектрограмма по медленному времени). Валидация на публичных датасетах DIAT-µSAT и RAD-DAR. Адаптация синтетика → реальные данные.",
+     "arXiv tutorial paper по cross-domain DOA"),
+    ("2", "Весна 2027", "Трекер и end-to-end бенчмарк",
+     "Реализация IMM + JPDA трекера поверх cascade outputs. Real-data dwell time experiments. Систематическое сравнение с классическими MUSIC, ESPRIT, GCC-PHAT.",
+     "Conference paper — IEEE RadarConf 2027 или EuRAD 2027"),
+    ("3", "Осень 2027", "Сенсорный fusion (acoustic + radar)",
+     "Добавление акустической решётки как второй модальности. Сравнение late fusion, early fusion и multimodal transformer. Open-source релиз библиотеки.",
+     "Journal paper — IEEE Sensors Journal или Drones (MDPI)"),
+    ("4", "Весна 2028 · диплом", "Сенсор-нода и защита",
+     "USB-микрофонная решётка + RTL-SDR или HackRF + Raspberry Pi 5. Финальный end-to-end бенчмарк. Live-демо в режиме обнаружения дрона в помещении.",
+     "Q1 paper submission (IEEE TGRS или Pattern Recognition) + диссертация"),
+  ] %}
+  <div style="display: flex; gap: 16px; padding-bottom: 18px; margin-bottom: 18px;
+              {% if not loop.last %}border-bottom: 1px solid var(--border);{% endif %}">
+    <div style="flex-shrink: 0; width: 44px; height: 44px; background: var(--accent-soft);
+                color: var(--accent); border-radius: 50%; display: flex;
+                align-items: center; justify-content: center; font-weight: 700;
+                font-family: var(--kpi-num-font); font-size: 18px;">
+      {{ sem[0] }}
+    </div>
+    <div style="flex: 1;">
+      <div style="display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px; margin-bottom: 4px;">
+        <span class="mono" style="font-size: 11px; color: var(--text-3); letter-spacing: 0.12em; text-transform: uppercase;">{{ sem[1] }}</span>
+        <span style="font-weight: 600; color: var(--text); font-size: 16px;">{{ sem[2] }}</span>
+      </div>
+      <p style="color: var(--text-2); margin-bottom: 8px;">{{ sem[3] }}</p>
+      <div style="display: inline-block; font-size: 12px; background: var(--bg-soft);
+                  border: 1px solid var(--border-hi); border-radius: 4px;
+                  padding: 4px 10px; color: var(--caveat);">
+        {{ sem[4] }}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</section>
+
+<!-- Партнёры -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Потенциальные партнёры и источники финансирования</div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">Академические</div>
+      <ul style="margin: 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>ИТМО (counter-UAV профиль)</li>
+        <li>Сколтех Center for Data-Intensive Science</li>
+        <li>ЛЭТИ, кафедра радиотехнических систем</li>
+      </ul>
+    </div>
+    <div>
+      <div style="font-weight: 600; color: var(--text); margin-bottom: 6px;">Индустриальные и гранты</div>
+      <ul style="margin: 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>ФПИ — Фонд перспективных исследований</li>
+        <li>Алмаз-Антей, Кронштадт</li>
+        <li>УМНИК, гранты РНФ</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+{% endblock %}

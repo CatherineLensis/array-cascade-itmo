@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{% block title %}Array Cascade — universal signal cascade{% endblock %}</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.1/dist/cdn.min.js"></script>
+  <script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+
+  <style>
+    :root {
+      --bg:           #0e1117;
+      --bg-soft:      #131722;
+      --panel:        #161b25;
+      --panel-alt:    #1a2030;
+      --border:       #232a3a;
+      --border-hi:    #2f3a52;
+      --text:         #e6ecf5;
+      --text-2:       #aab3c5;
+      --text-3:       #6b7488;
+      --accent:       #5b8def;
+      --accent-soft:  #2f4b8a;
+      --positive:     #4caf85;
+      --caveat:       #e0a247;
+      --danger:       #e26060;
+      --kpi-num-font: ui-monospace, "JetBrains Mono", "Cascadia Mono", Consolas, monospace;
+      --body-font:    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--body-font);
+      font-size: 15px;
+      line-height: 1.55;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    h1, h2, h3, h4 { color: var(--text); font-weight: 600; line-height: 1.25; margin: 0 0 0.5rem; }
+    h1 { font-size: 1.875rem; }
+    h2 { font-size: 1.375rem; }
+    h3 { font-size: 1.125rem; }
+
+    p { color: var(--text-2); margin: 0 0 0.75rem; }
+
+    code, pre, .mono { font-family: var(--kpi-num-font); }
+
+    /* ── header ─────────────────────────────────────────── */
+    .site-header {
+      background: var(--bg-soft);
+      border-bottom: 1px solid var(--border);
+      padding: 14px 0;
+    }
+    .site-header .inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: var(--text);
+      text-decoration: none;
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .brand:hover { text-decoration: none; }
+    .brand-mark {
+      flex-shrink: 0;
+      font-family: var(--kpi-num-font);
+      font-size: 11px;
+      letter-spacing: 0.18em;
+      padding: 5px 10px;
+      border-radius: 4px;
+      color: #0b1224;
+      background: linear-gradient(135deg, #6e9af0 0%, var(--accent) 100%);
+      box-shadow: 0 0 18px rgba(91, 141, 239, 0.22);
+    }
+    .brand-text { display: flex; flex-direction: column; min-width: 0; }
+    .brand-title {
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .brand-sub { font-size: 12px; color: var(--text-3); }
+
+    .nav-links {
+      display: flex;
+      gap: 22px;
+      align-items: center;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    @media (max-width: 1100px) {
+      .nav-links { gap: 14px; font-size: 13px; }
+      .brand-sub { display: none; }
+    }
+    @media (max-width: 860px) {
+      .site-header .inner { flex-wrap: wrap; }
+      .nav-links { order: 3; width: 100%; justify-content: flex-start; padding-top: 8px; }
+    }
+    .nav-link {
+      color: var(--text-2);
+      padding-bottom: 4px;
+      border-bottom: 2px solid transparent;
+      transition: color .15s, border-color .15s;
+    }
+    .nav-link:hover { color: var(--text); text-decoration: none; }
+    .nav-link.active {
+      color: var(--accent);
+      border-bottom-color: var(--accent);
+    }
+
+    .health {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+    .health-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-3);
+    }
+    .health-dot.ok  { background: var(--positive); }
+    .health-dot.err { background: var(--danger); }
+
+    /* ── main / panels ──────────────────────────────────── */
+    main {
+      flex: 1;
+      width: 100%;
+    }
+    .container {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 32px 24px 48px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px 22px;
+    }
+    .panel-tight { padding: 16px 18px; }
+    .panel + .panel { margin-top: 14px; }
+
+    .panel-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 8px;
+    }
+    .panel-label.blue    { color: var(--accent); }
+    .panel-label.green   { color: var(--positive); }
+    .panel-label.amber   { color: var(--caveat); }
+
+    /* ── KPI ────────────────────────────────────────────── */
+    .kpi {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 18px;
+    }
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-3);
+      margin-bottom: 6px;
+    }
+    .kpi-value {
+      font-family: var(--kpi-num-font);
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+      line-height: 1.1;
+    }
+    .kpi-value.accent  { color: var(--accent); }
+    .kpi-value.amber   { color: var(--caveat); }
+    .kpi-value.green   { color: var(--positive); }
+    .kpi-caption {
+      font-size: 12px;
+      color: var(--text-3);
+      margin-top: 6px;
+      line-height: 1.4;
+    }
+
+    /* ── form controls (FIX невидимых select) ───────────── */
+    label.field {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-2);
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    select, input[type="text"], input[type="number"], textarea {
+      width: 100%;
+      background: var(--bg-soft);
+      color: var(--text);
+      border: 1px solid var(--border-hi);
+      border-radius: 6px;
+      padding: 8px 12px;
+      font: inherit;
+      font-size: 14px;
+      appearance: none;
+      -webkit-appearance: none;
+    }
+    select {
+      background-image:
+        linear-gradient(45deg, transparent 50%, var(--text-2) 50%),
+        linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+      background-position:
+        calc(100% - 16px) 50%,
+        calc(100% - 11px) 50%;
+      background-size: 5px 5px, 5px 5px;
+      background-repeat: no-repeat;
+      padding-right: 32px;
+    }
+    select option {
+      background: var(--bg-soft);
+      color: var(--text);
+    }
+    select:focus, input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      width: 100%;
+      padding: 6px 0;
+    }
+    input[type="range"]::-webkit-slider-runnable-track {
+      height: 4px;
+      background: var(--border-hi);
+      border-radius: 2px;
+    }
+    input[type="range"]::-moz-range-track {
+      height: 4px;
+      background: var(--border-hi);
+      border-radius: 2px;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-top: -6px;
+      cursor: pointer;
+    }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--accent);
+      border: none;
+      cursor: pointer;
+    }
+
+    /* ── buttons ────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 9px 16px;
+      border-radius: 6px;
+      border: 1px solid transparent;
+      background: var(--panel-alt);
+      color: var(--text);
+      font: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background .15s, border-color .15s;
+    }
+    .btn:hover { background: var(--border); }
+    .btn-primary {
+      background: var(--accent);
+      color: #0b1224;
+      font-weight: 600;
+    }
+    .btn-primary:hover { background: #6e9af0; }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+    .btn-link {
+      display: inline-block;
+      color: var(--accent);
+      padding: 0;
+      background: transparent;
+      border: none;
+    }
+
+    /* ── tables ─────────────────────────────────────────── */
+    table.data {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    table.data th, table.data td {
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: top;
+    }
+    table.data th {
+      color: var(--text-3);
+      font-weight: 600;
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      background: var(--bg-soft);
+    }
+    table.data td.num {
+      font-family: var(--kpi-num-font);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* ── prose (для about) ──────────────────────────────── */
+    .prose {
+      color: var(--text-2);
+      line-height: 1.65;
+      max-width: 760px;
+    }
+    .prose h1, .prose h2, .prose h3, .prose h4 { color: var(--text); margin-top: 1.5em; }
+    .prose h2 { font-size: 1.25rem; }
+    .prose h3 { font-size: 1.05rem; }
+    .prose strong { color: var(--text); }
+    .prose ul, .prose ol { padding-left: 1.2em; }
+    .prose li { margin-bottom: 0.25em; }
+    .prose code { background: var(--bg-soft); padding: 1px 5px; border-radius: 3px; font-size: 0.92em; }
+    .prose blockquote {
+      border-left: 3px solid var(--accent-soft);
+      padding-left: 14px;
+      color: var(--text-2);
+      margin: 1em 0;
+    }
+    .prose table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin: 1em 0;
+    }
+    .prose th, .prose td {
+      padding: 6px 10px;
+      border: 1px solid var(--border);
+    }
+    .prose th { background: var(--bg-soft); color: var(--text); }
+
+    /* ── footer ─────────────────────────────────────────── */
+    .site-footer {
+      background: var(--bg-soft);
+      border-top: 1px solid var(--border);
+      padding: 14px 0;
+      font-size: 12px;
+      color: var(--text-3);
+    }
+    .site-footer .inner {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 24px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    /* ── note blocks ────────────────────────────────────── */
+    .note {
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      border-left: 3px solid var(--border-hi);
+      background: var(--bg-soft);
+      color: var(--text-2);
+    }
+    .note.note-caveat {
+      border-left-color: var(--caveat);
+    }
+    .note.note-positive {
+      border-left-color: var(--positive);
+    }
+
+    /* utility overrides — keep Tailwind layout, kill any bg/text mismatches */
+    .bg-white, .bg-slate-50, .bg-slate-100, .bg-blue-50, .bg-emerald-50, .bg-amber-50 {
+      background: var(--panel) !important;
+    }
+    .text-slate-900, .text-slate-700, .text-slate-600 { color: var(--text-2) !important; }
+    .text-slate-500, .text-slate-400 { color: var(--text-3) !important; }
+    .border-slate-200, .border-slate-300, .border-blue-200,
+    .border-emerald-200, .border-amber-200 { border-color: var(--border) !important; }
+  </style>
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="inner">
+      <a href="/" class="brand">
+        <span class="brand-mark">ARRAY · CASCADE</span>
+        <span class="brand-text">
+          <span class="brand-title">Универсальный подход к обработке многоканальных систем>
+          <span class="brand-sub">общий принцип, разные физические условия</span>
+        </span>
+      </a>
+      <nav class="nav-links">
+        <a href="/"            class="nav-link {% if page == 'index' %}active{% endif %}">Главная</a>
+        <a href="/demo"        class="nav-link {% if page == 'demo' %}active{% endif %}">Демонстрация</a>
+        <a href="/methodology" class="nav-link {% if page == 'methodology' %}active{% endif %}">Методика</a>
+        <a href="/counter_uav" class="nav-link {% if page == 'counter_uav' %}active{% endif %}">Counter-UAV</a>
+        <a href="/roadmap"     class="nav-link {% if page == 'roadmap' %}active{% endif %}">План</a>
+        <a href="/about"       class="nav-link {% if page == 'about' %}active{% endif %}">О проекте</a>
+      </nav>
+      <div class="health" title="статус загруженных моделей">
+        <span class="health-text">статус</span>
+        <span id="health-dot" class="health-dot"></span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="inner">
+      <span>Array Cascade — единый принцип обработки для двух прикладных задач</span>
+    </div>
+  </footer>
+
+  <script>
+    fetch('/health')
+      .then((resp) => resp.ok ? resp.json() : Promise.reject(new Error('health unavailable')))
+      .then((data) => {
+        const dot = document.getElementById('health-dot');
+        const models = data?.models || {};
+        const ok = (models?.automotive?.ready) && (models?.counter_uav?.ready);
+        dot.classList.add(ok ? 'ok' : 'err');
+      })
+      .catch(() => {
+        document.getElementById('health-dot')?.classList.add('err');
+      });
+  </script>
+
+</body>
+</html>

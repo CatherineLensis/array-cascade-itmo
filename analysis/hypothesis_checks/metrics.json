@@ -1,0 +1,47 @@
+{
+  "samples": {
+    "synth_total": 117234,
+    "real_total": 67561,
+    "beamforming_sample": 5000,
+    "rootmusic_sample": 1000
+  },
+  "H1_angle_distribution": {
+    "js_div": 0.04970016000487583,
+    "ks_dist": 0.22321544012028727,
+    "synth_mean": 0.09670142925747394,
+    "real_mean": 0.6663930826336045,
+    "synth_std": 46.79679972036203,
+    "real_std": 23.799202405879647
+  },
+  "H2_beamforming_label_check": {
+    "rmse": 17.54286917578701,
+    "mae": 10.059241925078165,
+    "median_ae": 3.402363845497799,
+    "rmse_class0": 16.65044959281435,
+    "n_errors": 5000
+  },
+  "H3_multipath_in_class0": {
+    "proj_lt_0.8_frac_real_class0": 0.0,
+    "omp1_gt_p95_frac_real_class0": 0.22811282369573463,
+    "omp1_p95_synth_class0": 0.34049119663905564
+  },
+  "H4_noise_phase_mismatch": {
+    "amp_mean_synth": 0.7854861304304851,
+    "amp_mean_real": 0.9226509608571565,
+    "amp_std_synth": 0.11474982484852604,
+    "amp_std_real": 0.04393510664775966,
+    "phase_std_mean_synth": 1.5601688050194382,
+    "phase_std_mean_real": 1.5735537850842916,
+    "js_amp": 15.113440262481648,
+    "js_phase_std": 3.129086866102349
+  },
+  "H5_edge_effect": {
+    "rmse_vs_angle_plot": "fig_rmse_vs_angle_real.png"
+  },
+  "H6_rootmusic_baseline": {
+    "rmse": 16.263954503083486,
+    "mae": 9.111369289328724,
+    "median_ae": 2.906539628059538,
+    "n_errors": 1000
+  }
+}

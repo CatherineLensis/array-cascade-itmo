@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}Воздушная сцена · counter-UAV — Array Cascade{% endblock %}
+
+{% block content %}
+
+<section style="margin-bottom: 28px;">
+  <div class="panel-label amber">Воздушная сцена · counter-UAV · X-диапазон 12,5 ГГц</div>
+  <h1>Прикладной случай counter-UAV</h1>
+  <p style="max-width: 760px;">
+    Воздушная сцена принципиально сложнее дорожной: эффективная поверхность
+    рассеяния дрона на два-три порядка меньше автомобильной, городские отражения
+    формируют ложные направления прихода, а доплеровский профиль птицы пересекается
+    с дроном по полосе. Главный прикладной вопрос — отличить дрон от птицы и не
+    выдавать ложных тревог.
+  </p>
+</section>
+
+<!-- Главный результат -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label green">Результат counter-UAV</div>
+  <h2 style="margin-bottom: 10px;">Классификация типа сцены</h2>
+  <p style="margin-bottom: 14px;">
+    Классификатор работает на статистиках micro-Doppler по медленному времени:
+    моменты, отношение пика к шумовому фону, стабильность гармоник, ширина
+    модулирующих полос. Усреднение — по пяти независимым запускам без утечек
+    данных.
+  </p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="kpi">
+      <div class="kpi-label">Различение дрона и птицы</div>
+      <div class="kpi-value green">
+        {{ "%.1f"|format(evidence.temporal_binary_acc_pct) if evidence.temporal_binary_acc_pct is not none else "—" }}&nbsp;%
+      </div>
+      <div class="kpi-caption">
+        accuracy, ± {{ "%.1f"|format(evidence.temporal_binary_std_pct) if evidence.temporal_binary_std_pct is not none else "—" }}&nbsp;%
+        · macro-F1 {{ "%.1f"|format(evidence.temporal_binary_macro_f1_pct) if evidence.temporal_binary_macro_f1_pct is not none else "—" }}&nbsp;%
+      </div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-label">Полная четырёхклассовая задача</div>
+      <div class="kpi-value green">
+        {{ "%.1f"|format(evidence.temporal_4class_acc_pct) if evidence.temporal_4class_acc_pct is not none else "—" }}&nbsp;%
+      </div>
+      <div class="kpi-caption">
+        accuracy, ± {{ "%.1f"|format(evidence.temporal_4class_std_pct) if evidence.temporal_4class_std_pct is not none else "—" }}&nbsp;%
+        · macro-F1 {{ "%.1f"|format(evidence.temporal_4class_macro_f1_pct) if evidence.temporal_4class_macro_f1_pct is not none else "—" }}&nbsp;%
+      </div>
+    </div>
+  </div>
+  <div class="note" style="margin-top: 14px; font-size: 13px;">
+    Методологическая ремарка: при анализе ошибок было установлено, что
+    разделяющий сигнал между дроном и птицей лежит во временной структуре
+    отражения, а не в одном пространственном кадре. Поэтому классификатор
+    использует статистики micro-Doppler по медленному времени.
+  </div>
+</section>
+
+<!-- Stability across runs -->
+<section class="panel" style="margin-bottom: 18px;" x-data="plotsApp()" x-init="load()">
+  <div class="panel-label">Воспроизводимость</div>
+  <h2 style="margin-bottom: 10px;">Стабильность на пяти независимых запусках</h2>
+  <p style="margin-bottom: 12px;">
+    Каждая точка — отдельный полный запуск с независимой инициализацией модели.
+    Линия пунктиром — среднее accuracy. Разброс показывает, что результат не
+    зависит от случайного начального состояния.
+  </p>
+  <div id="plot-seeds" style="min-height: 280px;"></div>
+</section>
+
+<!-- micro-Doppler -->
+<section class="panel" style="margin-bottom: 18px;" x-data="specApp()" x-init="load()">
+  <div class="panel-label">Почему модель видит разницу</div>
+  <h2 style="margin-bottom: 10px;">Спектрограммы micro-Doppler (STFT по медленному времени)</h2>
+  <p style="margin-bottom: 14px;">
+    У дрона видны узкие стабильные гармоники от вращения лопастей.
+    У птицы — широкополосный модулированный паттерн от взмахов крыла 3–8&nbsp;Гц.
+    Именно эта разница улавливается статистиками, поданными на вход
+    градиентного бустинга.
+  </p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <div class="panel-label green" style="margin-bottom: 4px;">Дрон (квадрокоптер)</div>
+      <div id="spec-drone" style="min-height: 280px;"></div>
+    </div>
+    <div>
+      <div class="panel-label amber" style="margin-bottom: 4px;">Птица</div>
+      <div id="spec-bird" style="min-height: 280px;"></div>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: var(--text-3); margin-top: 10px;" x-text="status"></div>
+</section>
+
+<!-- Per-class precision/recall -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Качество по классам</div>
+  <h2 style="margin-bottom: 10px;">Precision, recall и F1 для каждого класса</h2>
+  <p style="margin-bottom: 12px;">
+    Полная четырёхклассовая задача, усреднение по пяти запускам.
+    Класс «фон» различается идеально, основные потери — в классе «две цели».
+  </p>
+  <div id="per-class-bars" style="min-height: 360px;"></div>
+</section>
+
+<!-- Spearman correlation -->
+<section class="panel" style="margin-bottom: 18px;" x-data="corrApp()" x-init="load()">
+  <div class="panel-label">Связь между признаками</div>
+  <h2 style="margin-bottom: 10px;">Матрица корреляций Спирмена</h2>
+  <p style="margin-bottom: 12px;">
+    Ранговая корреляция между признаками micro-Doppler, которые подаются на
+    вход классификатора: статистики магнитуды (среднее, среднеквадратичное
+    отклонение, минимум, максимум), разброс развёрнутой фазы и первые
+    восемь бинов спектра. Корреляции близкие к +1 (синий) означают, что
+    признаки несут схожую информацию; близкие к 0 (тёмный фон) — признаки
+    независимы и взаимно дополняют классификатор.
+  </p>
+  <div id="spearman-heatmap" style="min-height: 460px;"></div>
+  <div style="font-size: 12px; color: var(--text-3); margin-top: 8px;" x-text="status"></div>
+</section>
+
+<!-- Confusion matrices -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Где модель ошибается</div>
+  <h2 style="margin-bottom: 14px;">Средние матрицы ошибок на отложенной выборке</h2>
+  <p style="margin-bottom: 14px;">
+    Значения усреднены по пяти запускам. На бинарной задаче ошибки симметричны
+    и редки. На полной задаче главная путаница — между дроном и классом «две цели»:
+    одиночный дрон рядом со слабым отражением фона иногда классифицируется как
+    «две цели». Класс «фон» различается идеально.
+  </p>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <div class="panel-label green" style="margin-bottom: 4px;">Бинарная задача</div>
+      <div id="conf-binary" style="min-height: 260px;"></div>
+    </div>
+    <div>
+      <div class="panel-label" style="margin-bottom: 4px;">Полная задача (четыре класса)</div>
+      <div id="conf-4class" style="min-height: 320px;"></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 классов -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Что классификатор различает</div>
+  <h2 style="margin-bottom: 14px;">Четыре типа сцены</h2>
+  <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div style="background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+      <div class="mono" style="font-size: 11px; color: var(--text-3); letter-spacing: 0.1em;">КЛАСС 0</div>
+      <div style="font-weight: 600; color: var(--text); margin-top: 4px;">clutter — фон</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">
+        Только шум и отражения от земли. Локализация пропускается.
+      </div>
+    </div>
+    <div style="background: var(--bg-soft); border: 1px solid var(--positive); border-radius: 6px; padding: 14px;">
+      <div class="mono" style="font-size: 11px; color: var(--positive); letter-spacing: 0.1em;">КЛАСС 1</div>
+      <div style="font-weight: 600; color: var(--text); margin-top: 4px;">drone — дрон</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">
+        Квадрокоптер. Узкие гармонические пики от четырёх роторов.
+      </div>
+    </div>
+    <div style="background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+      <div class="mono" style="font-size: 11px; color: var(--text-3); letter-spacing: 0.1em;">КЛАСС 2</div>
+      <div style="font-weight: 600; color: var(--text); margin-top: 4px;">bird — птица</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">
+        Взмахи крыла 3–8&nbsp;Гц, широкополосный модулированный спектр.
+      </div>
+    </div>
+    <div style="background: var(--bg-soft); border: 1px solid var(--border); border-radius: 6px; padding: 14px;">
+      <div class="mono" style="font-size: 11px; color: var(--text-3); letter-spacing: 0.1em;">КЛАСС 3</div>
+      <div style="font-weight: 600; color: var(--text); margin-top: 4px;">multi — две цели</div>
+      <div style="font-size: 12px; color: var(--text-3); margin-top: 6px;">
+        Две цели одновременно в поле зрения решётки. Локализатор оценивает два угла.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Городской многолучевой -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Локализация в городе</div>
+  <h2 style="margin-bottom: 10px;">Многолучевой фон от зданий</h2>
+  <p>
+    Здания создают переотражения, которые приходят в решётку под другими углами.
+    На показательных сценах ошибка по углу составляет единицы градусов; локализация
+    выполняется по выбору пика в DOA-спектре.
+  </p>
+</section>
+
+
+<script>
+function specApp() {
+  return {
+    status: 'загрузка спектрограмм…',
+    async load() {
+      try {
+        const resp = await fetch('/api/counter_uav_spectrograms');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        Plotly.react('spec-drone', data.drone.data, data.drone.layout, {responsive: true, displaylogo: false});
+        Plotly.react('spec-bird',  data.bird.data,  data.bird.layout,  {responsive: true, displaylogo: false});
+        this.status = 'Оконное преобразование Фурье по физической модели проекта, медленное время';
+      } catch (e) {
+        this.status = 'не удалось построить спектрограммы: ' + e.message;
+      }
+    }
+  }
+}
+
+function plotsApp() {
+  return {
+    async load() {
+      try {
+        const resp = await fetch('/api/counter_uav_plots');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        if (data.seed_stability)    Plotly.react('plot-seeds',     data.seed_stability.data,    data.seed_stability.layout,    {responsive: true, displaylogo: false});
+        if (data.per_class_bars)    Plotly.react('per-class-bars', data.per_class_bars.data,    data.per_class_bars.layout,    {responsive: true, displaylogo: false});
+        if (data.confusion_binary)  Plotly.react('conf-binary',    data.confusion_binary.data,  data.confusion_binary.layout,  {responsive: true, displaylogo: false});
+        if (data.confusion_4class)  Plotly.react('conf-4class',    data.confusion_4class.data,  data.confusion_4class.layout,  {responsive: true, displaylogo: false});
+      } catch (e) {
+        console.error('plots load failed:', e);
+      }
+    }
+  }
+}
+
+function corrApp() {
+  return {
+    status: 'вычисление корреляций на свежей выборке…',
+    async load() {
+      try {
+        const resp = await fetch('/api/counter_uav_feature_correlation');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const fig = await resp.json();
+        Plotly.react('spearman-heatmap', fig.data, fig.layout, {responsive: true, displaylogo: false});
+        this.status = 'Вычислено на 300 образцах (150 дрон + 150 птица) из физической модели проекта';
+      } catch (e) {
+        this.status = 'не удалось построить матрицу корреляций: ' + e.message;
+      }
+    }
+  }
+}
+</script>
+
+{% endblock %}

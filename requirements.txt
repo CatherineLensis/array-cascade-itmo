@@ -1,0 +1,23 @@
+# Основные зависимости (наследовано из Shishanov_paper)
+numpy>=1.24
+torch>=2.0
+scikit-learn>=1.3
+matplotlib>=3.7
+scipy>=1.10
+
+# UI (FastAPI + Jinja2, jury demo)
+fastapi>=0.110
+uvicorn[standard]>=0.27
+jinja2>=3.1
+python-multipart>=0.0.9
+plotly>=5.20
+
+# Counter-UAV synthetic + EDA (День 2-3)
+tqdm>=4.66
+pandas>=2.0
+
+# Тесты
+pytest>=8.0
+
+# Опционально (для старого подхода в old_approach/)
+# complexPyTorch

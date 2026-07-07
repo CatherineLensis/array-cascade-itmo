@@ -1,0 +1,310 @@
+{% extends "base.html" %}
+{% block title %}Методика — Array Cascade{% endblock %}
+
+{% block content %}
+
+<section style="margin-bottom: 28px;">
+  <div class="panel-label blue">Как устроен проект</div>
+  <h1>Один принцип обработки, разные физические задачи</h1>
+  <p style="max-width: 760px;">
+    Методика строится не вокруг одного радара и не вокруг одной узкой задачи.
+    Общая логика остаётся неизменной: система принимает многоканальный сигнал,
+    готовит его, определяет тип сцены и только после этого запускает локализацию.
+    Меняются не шаги обработки, а физические условия, классы и сложность среды.
+  </p>
+</section>
+
+<!-- SVG-диаграмма каскада -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Архитектура обработки</div>
+  <h2 style="margin-bottom: 14px;">Пять этапов</h2>
+  <div style="overflow-x: auto;">
+    <svg viewBox="0 0 1000 280" width="100%" preserveAspectRatio="xMidYMid meet"
+         style="display: block; min-width: 720px;">
+      <defs>
+        <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#5b8def"/>
+        </marker>
+      </defs>
+
+      <!-- этапы -->
+      <g font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+        <g>
+          <rect x="10"  y="100" width="170" height="78" rx="6" fill="#1a2030" stroke="#232a3a"/>
+          <text x="95"  y="125" fill="#aab3c5" font-size="11" text-anchor="middle" letter-spacing="2">ЭТАП 1</text>
+          <text x="95"  y="148" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">Входной сигнал</text>
+          <text x="95"  y="167" fill="#6b7488" font-size="11" text-anchor="middle">8 каналов, один снимок</text>
+        </g>
+        <g>
+          <rect x="200" y="100" width="170" height="78" rx="6" fill="#1a2030" stroke="#232a3a"/>
+          <text x="285" y="125" fill="#aab3c5" font-size="11" text-anchor="middle" letter-spacing="2">ЭТАП 2</text>
+          <text x="285" y="148" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">Подготовка</text>
+          <text x="285" y="167" fill="#6b7488" font-size="11" text-anchor="middle">Винер · RMS · без обработки</text>
+        </g>
+        <g>
+          <rect x="390" y="100" width="170" height="78" rx="6" fill="#1a2030" stroke="#232a3a"/>
+          <text x="475" y="125" fill="#aab3c5" font-size="11" text-anchor="middle" letter-spacing="2">ЭТАП 3</text>
+          <text x="475" y="148" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">Классификация</text>
+          <text x="475" y="167" fill="#6b7488" font-size="11" text-anchor="middle">ComplexNet · N классов</text>
+        </g>
+        <g>
+          <rect x="580" y="100" width="170" height="78" rx="6" fill="#1a2030" stroke="#232a3a"/>
+          <text x="665" y="125" fill="#aab3c5" font-size="11" text-anchor="middle" letter-spacing="2">ЭТАП 4</text>
+          <text x="665" y="148" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">Маршрутизация</text>
+          <text x="665" y="167" fill="#6b7488" font-size="11" text-anchor="middle">DOA по необходимости</text>
+        </g>
+        <g>
+          <rect x="770" y="100" width="220" height="78" rx="6" fill="#1a2030" stroke="#232a3a"/>
+          <text x="880" y="125" fill="#aab3c5" font-size="11" text-anchor="middle" letter-spacing="2">ЭТАП 5</text>
+          <text x="880" y="148" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">Локализация DOA</text>
+          <text x="880" y="167" fill="#6b7488" font-size="11" text-anchor="middle">Siamese · LISTA · CovRecon</text>
+        </g>
+      </g>
+
+      <!-- стрелки -->
+      <line x1="180" y1="139" x2="200" y2="139" stroke="#5b8def" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="370" y1="139" x2="390" y2="139" stroke="#5b8def" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="560" y1="139" x2="580" y2="139" stroke="#5b8def" stroke-width="1.5" marker-end="url(#arrow)"/>
+      <line x1="750" y1="139" x2="770" y2="139" stroke="#5b8def" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+      <!-- верхняя плашка -->
+      <g font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+        <rect x="10" y="20" width="980" height="56" rx="6" fill="#131722" stroke="#2f3a52"/>
+        <text x="500" y="42" fill="#5b8def" font-size="11" text-anchor="middle" letter-spacing="2">ОБЩИЙ ПРИНЦИП</text>
+        <text x="500" y="63" fill="#e6ecf5" font-size="14" font-weight="600" text-anchor="middle">
+          Меняются только физика решётки и набор классов сцены
+        </text>
+      </g>
+
+      <!-- нижняя подпись -->
+      <g font-family="-apple-system, Segoe UI, Roboto, sans-serif">
+        <text x="500" y="220" fill="#aab3c5" font-size="12" text-anchor="middle">
+          Дорожная сцена: <tspan fill="#e6ecf5">8-канальная линейная решётка · 77 ГГц · 3 класса · Винер + RMS</tspan>
+        </text>
+        <text x="500" y="240" fill="#aab3c5" font-size="12" text-anchor="middle">
+          Воздушная сцена: <tspan fill="#e6ecf5">8-канальная линейная решётка · 12,5 ГГц · 4 класса · без предобработки</tspan>
+        </text>
+      </g>
+    </svg>
+  </div>
+</section>
+
+<!-- Что общего, что меняется -->
+<section class="panel" style="margin-bottom: 18px;">
+  <div class="panel-label">Что универсально, а что зависит от задачи</div>
+  <h2 style="margin-bottom: 12px;">Сравнение по слоям</h2>
+  <table class="data">
+    <thead>
+      <tr>
+        <th>Слой</th>
+        <th>Остаётся общим</th>
+        <th>Меняется между задачами</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Вход</strong></td>
+        <td>Многоканальный комплексный сигнал с решётки</td>
+        <td>Сила сигнала, среда распространения, характер отражений</td>
+      </tr>
+      <tr>
+        <td><strong>Классификация</strong></td>
+        <td>Архитектура ComplexNet, принцип «сначала понять сцену»</td>
+        <td>Список классов и то, какие ошибки наиболее критичны</td>
+      </tr>
+      <tr>
+        <td><strong>Маршрутизация</strong></td>
+        <td>Логика «DOA только там, где она нужна»</td>
+        <td>Набор сцен, для которых имеет смысл считать DOA</td>
+      </tr>
+      <tr>
+        <td><strong>Локализация</strong></td>
+        <td>Общий интерфейс DOA-оценки и метрик</td>
+        <td>Steering-модель, уровень multipath, стабильность цели</td>
+      </tr>
+      <tr>
+        <td><strong>Метрики</strong></td>
+        <td>Accuracy / macro-F1 для классификации, RMSE для локализации</td>
+        <td>Для воздушной сцены runtime и offline разделяются явно</td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- Две DomainSpec -->
+<section style="margin-bottom: 18px;">
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div class="panel">
+      <div class="panel-label blue">Дорожная сцена — что подтверждено</div>
+      <ul style="margin: 8px 0 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>Классификация на реальных данных TI&nbsp;AWR1843 — <strong style="color: var(--text);">93,8&nbsp;%</strong> accuracy</li>
+        <li>Локализация на отложенной выборке — <strong style="color: var(--text);">RMSE 5,23°</strong></li>
+        <li>Превосходит классический предел Рэлея (≈&nbsp;29°) на порядок в режиме одного временного снимка</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <div class="panel-label amber">Воздушная сцена — результат counter-UAV</div>
+      <ul style="margin: 8px 0 0; padding-left: 20px; color: var(--text-2); font-size: 14px;">
+        <li>Различение дрона и птицы — <strong style="color: var(--text);">94&nbsp;%</strong> accuracy на бинарной задаче</li>
+        <li>Полная четырёхклассовая задача — <strong style="color: var(--text);">76&nbsp;%</strong> accuracy</li>
+        <li>Локализация по углу — единицы градусов на показательных сценах</li>
+      </ul>
+      <p style="font-size: 12px; color: var(--text-3); margin-top: 10px;">
+        Классификатор работает на статистиках micro-Doppler по медленному времени.
+        Усреднение — по пяти независимым запускам.
+      </p>
+    </div>
+  </div>
+</section>
+
+
+<!-- Кривые обучения нейронных сетей -->
+<section class="panel" style="margin-bottom: 18px;" x-data="trainApp()" x-init="load()">
+  <div class="panel-label">Обучение нейронных сетей</div>
+  <h2 style="margin-bottom: 10px;">Кривые сходимости</h2>
+  <p style="margin-bottom: 14px;">
+    Для дорожной сцены обучено пять нейронных сетей: классификатор сцены
+    <strong style="color: var(--text);">ComplexNet</strong> и четыре независимых
+    алгоритма оценки направления — <strong style="color: var(--text);">Siamese</strong>
+    (эмбеддинг с регрессией по углу), <strong style="color: var(--text);">LISTA</strong>
+    (физически обоснованное разворачивание итераций), <strong style="color: var(--text);">CovRecon</strong>
+    (восстановление ковариации + Root-MUSIC) и <strong style="color: var(--text);">HierGRU</strong>
+    (двухуровневая GRU с грубой и точной оценкой).
+  </p>
+
+  <h3 style="margin-bottom: 8px;">Классификатор сцены</h3>
+  <div id="train-clf" style="min-height: 320px; margin-bottom: 20px;"></div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <h3 style="margin-bottom: 8px;">Сравнение обучения четырёх DOA-сетей</h3>
+      <p style="font-size: 12px; color: var(--text-3); margin-bottom: 8px;">
+        Логарифмическая шкала по оси потерь. LISTA стартует с очень высокого
+        значения, потому что первый прогон через физическую развёртку даёт
+        большую невязку до того, как сеть подстроит коэффициенты.
+      </p>
+      <div id="train-doa-loss" style="min-height: 340px;"></div>
+    </div>
+    <div>
+      <h3 style="margin-bottom: 8px;">Финальный RMSE на валидации</h3>
+      <p style="font-size: 12px; color: var(--text-3); margin-bottom: 8px;">
+        Лучшие методы (LISTA и Siamese) сходятся к ошибке около 5°.
+        CovRecon заметно проигрывает на single-snapshot сценах — это известное
+        ограничение метода, ему требуется усреднение по нескольким снимкам.
+      </p>
+      <div id="train-doa-rmse" style="min-height: 340px;"></div>
+    </div>
+  </div>
+  <div style="font-size: 12px; color: var(--text-3); margin-top: 10px;" x-text="status"></div>
+</section>
+
+
+<!-- M1: запуск двух доменов -->
+<section class="panel" style="margin-bottom: 18px;" x-data="bothApp()">
+  <div class="panel-label blue">Единый принцип, две задачи · живая демонстрация</div>
+  <h2 style="margin-bottom: 8px;">Запуск каскада на обеих сценах одновременно</h2>
+  <p style="font-size: 14px;">
+    Кнопка ниже запускает один и тот же каскад на дорожной и воздушной сценах
+    параллельно. Меняются только описание физики решётки и набор классов сцены,
+    остальной код общий.
+  </p>
+  <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 14px;">
+    <button class="btn btn-primary" @click="run()" :disabled="loading">
+      <span x-show="!loading">Запустить обе сцены</span>
+      <span x-show="loading">Идёт расчёт…</span>
+    </button>
+    <span style="font-size: 13px; color: var(--text-3);" x-text="status"></span>
+  </div>
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+    <div>
+      <div class="panel-label blue" style="margin-bottom: 6px;">Дорожная сцена · a1</div>
+      <div class="kpi" style="margin-bottom: 8px;">
+        <div class="kpi-label">Класс · ошибка локализации</div>
+        <div class="kpi-value accent" style="font-size: 20px;" x-text="autoLabel"></div>
+        <div class="kpi-caption" x-text="autoCaption"></div>
+      </div>
+      <div id="m1-clf-auto" style="min-height: 180px;"></div>
+      <div id="m1-doa-auto" style="min-height: 280px;"></div>
+    </div>
+    <div>
+      <div class="panel-label amber" style="margin-bottom: 6px;">Воздушная сцена · u1</div>
+      <div class="kpi" style="margin-bottom: 8px;">
+        <div class="kpi-label">Класс · ошибка локализации</div>
+        <div class="kpi-value amber" style="font-size: 20px;" x-text="uavLabel"></div>
+        <div class="kpi-caption" x-text="uavCaption"></div>
+      </div>
+      <div id="m1-clf-uav" style="min-height: 180px;"></div>
+      <div id="m1-doa-uav" style="min-height: 280px;"></div>
+    </div>
+  </div>
+</section>
+
+<script>
+function trainApp() {
+  return {
+    status: 'загрузка кривых обучения…',
+    async load() {
+      try {
+        const resp = await fetch('/api/training_curves');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const d = await resp.json();
+        if (d.classifier_curves)    Plotly.react('train-clf',      d.classifier_curves.data,    d.classifier_curves.layout,    {responsive: true, displaylogo: false});
+        if (d.doa_training_overlay) Plotly.react('train-doa-loss', d.doa_training_overlay.data, d.doa_training_overlay.layout, {responsive: true, displaylogo: false});
+        if (d.doa_rmse)             Plotly.react('train-doa-rmse', d.doa_rmse.data,             d.doa_rmse.layout,             {responsive: true, displaylogo: false});
+        this.status = 'кривые из реальных логов обучения: classifier — 34 эпохи, Siamese и LISTA — 60, HierGRU — 120';
+      } catch (e) {
+        this.status = 'не удалось загрузить кривые обучения: ' + e.message;
+      }
+    }
+  }
+}
+
+function bothApp() {
+  return {
+    loading: false,
+    status: 'нажмите «Запустить обе сцены», чтобы выполнить параллельный прогон',
+    autoLabel: '—',
+    autoCaption: 'ждёт запуска',
+    uavLabel: '—',
+    uavCaption: 'ждёт запуска',
+    async run() {
+      this.loading = true;
+      this.status = 'выполняется параллельный прогон…';
+      try {
+        const resp = await fetch('/api/run_both', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({preset_auto: 'a1', preset_uav: 'u1'})
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        const A = data.automotive, U = data.counter_uav;
+
+        const fmtErr = (e) => (typeof e === 'number' && e >= 0)
+          ? e.toFixed(2) + '°'
+          : '—';
+
+        this.autoLabel   = (A.classifier_label || '—') + ' · ' + fmtErr(A.metrics?.error_deg);
+        this.autoCaption = 'задержка ' + (A.metrics?.latency_ms?.toFixed(1) ?? '?') + ' мс';
+        this.uavLabel    = (U.classifier_label || '—') + ' · ' + fmtErr(U.metrics?.error_deg);
+        this.uavCaption  = 'задержка ' + (U.metrics?.latency_ms?.toFixed(1) ?? '?') + ' мс';
+
+        if (A.classifier_fig) Plotly.react('m1-clf-auto', A.classifier_fig.data, A.classifier_fig.layout, {responsive: true, displaylogo: false});
+        if (A.doa_fig)        Plotly.react('m1-doa-auto', A.doa_fig.data,        A.doa_fig.layout,        {responsive: true, displaylogo: false});
+        if (U.classifier_fig) Plotly.react('m1-clf-uav',  U.classifier_fig.data, U.classifier_fig.layout, {responsive: true, displaylogo: false});
+        if (U.doa_fig)        Plotly.react('m1-doa-uav',  U.doa_fig.data,        U.doa_fig.layout,        {responsive: true, displaylogo: false});
+
+        this.status = 'готово · обе сцены посчитаны на одном общем ядре обработки';
+      } catch (e) {
+        this.status = 'ошибка: ' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+}
+</script>
+
+{% endblock %}

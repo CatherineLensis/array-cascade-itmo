@@ -1,0 +1,185 @@
+У меня есть пара статей на интересующую меня тему C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\Multipath_Transaction_on_radar_system_as_papers_13_08_2025.docx и C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\jamming_paper_v2.docx Ранее мой студент занимался исследованиями и забросил задачу из-за неуспеваемости. Есть Скрипт, который якобы формирует синтетические данные C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\dataset.py , а также реальные данные C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_05_29_pbms007.txt C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_05_09_pbms004.txt C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_04_30_pbms002.txt C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_04_30_cm1s000.txt C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_04_09_pms3000.txt C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\train_validate\2019_04_09_pms1000.txt Есть скрипты, которые якобы должны совершать классификацию C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\NN_multipath_complex_v3.py или C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\NN_multipath_complex_3_classes_on_real_data.py для одной цели, для двух целей и мультивход. Твоя задача проанализировать качество скриптов, понять как они работают, правильно ли работают, проанализировать все данные и не забыть их. В C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\study_for_paper_v1.py я пытался развить 4 ре подхода по определению приходящих углов, однако не смог корректно сформировать или использоватьь обучающие данные, поскольку нужно сделать правильную предобработку. Для первого скрипта из C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\study_for_paper_v1.py была фундаментальная ошибка, которую тоже нужно исправить, остальные три отработали, но с неправильными данными. Предложи правильную предобработку и выдели правильные подходы в обучении нейронных сетей. Если нужно используй context7 mcp для того чтобы знать правильные библиотеки и функции
+
+Кратко, по текущим файлам (без статей, жду ваш текст):
+NN_multipath_complex_v3.py сейчас не запускается: импортируются dataset_gen_2D/dataset_gen_2D_clean, которых нет в dataset.py, плюс после первой валидации модель остаётся в eval() и обучение дальше некорректно (BatchNorm/Dropout).
+NN_multipath_complex_3_classes_on_real_data.py в целом логичен для 8‑канальных данных, но пути жёстко завязаны на D:/..., и та же проблема с eval() без возврата в train().
+Формат реальных данных понятен: 3 колонки метаданных, 8 комплексных каналов, 3 метрики, 2 азимута, класс. Предобработка должна сохранять фазу: калибровать амплитуды/фазы по каналам, нормировать по общей мощности (не по максимуму), при необходимости — усреднять ковариацию по соседним снимкам, затем подавлять помехи (Wiener/whitening) и только потом подавать в сеть.
+Наиболее устойчивые подходы: physics‑informed/unfolded (LISTA/OPAMP), контрастивный siamese для устойчивости к шуму/мультипути, и ковариационный+Root‑MUSIC как сильная база/бенчмарк; их можно объединить в multitask (класс + DOA).
+Пришлите текст/выжимку из обеих статей — обновлю рекомендации по подавлению jamming и корректной предобработке.
+
+==============================================================
+==============================================================
+
+[8 tools called]
+
+Короткие рекомендации и замечания по качеству скриптов/данных и по статьям.
+
+### Ключевые проблемы в коде
+- `NN_multipath_complex_v3.py` не запускается: используются `dataset_gen_2D/dataset_gen_2D_clean`, которых нет в `dataset.py` (импорт есть, определений нет).  
+\n```1:18:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\NN_multipath_complex_v3.py
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
+import torch
+import torch.nn as nn
+from dataset import dataset_gen_2D, dataset_gen_2D_clean, math_classificator
+...
+X, y, mb_metrix = dataset_gen_2D_clean(131072, 1)
+```
+- В обоих NN‑скриптах после первой валидации модель остаётся в `eval()` и дальше обучается в неверном режиме (BatchNorm/Dropout «заморожены»).  
+\n```124:130:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\NN_multipath_complex_3_classes_on_real_data.py
+    # Validation
+    model.eval()
+    correct = 0
+    total = 0
+    with torch.no_grad():
+        outputs = model(X_test_complex)
+```
+(То же в `NN_multipath_complex_v3.py`.)
+- В 1‑м подходе из `study_for_paper_v1.py` **фундаментальная ошибка формата**: `sig_mimo.squeeze()` после Wiener‑Hopf меняет размерность на `[N,12]`, а датасет ожидает `[N,12,1]`; дальше происходит неверная перестановка/ввод.  
+\n```116:130:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\study_for_paper_v1.py
+def run_siamese_pipeline(...):
+    sig_mimo, angle_mimo, metrix, mb_metrix = dataset_gen_final(...)
+    ...
+    sig_mimo = wiener_suppress(sig_mimo.squeeze())  # Подавление jamming
+    ...
+    dataset = SiameseDataset(sig_mimo, doa_labels, metrix)
+```
+
+### Данные: формат и несостыковки
+- Реальные данные имеют 25 колонок: 3 мета‑поля, 8 комплексных каналов (Re/Im), 3 метрики, 2 азимута, класс.  
+\n```257:279:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\dataset.py
+raw_data = np.loadtxt(path + files[num_file])
+...
+ch = raw_data[i, 3:11]+1j*raw_data[i, 11:19]
+...
+exp_dataset['mb_metrix'].append(raw_data[i,19:22])
+exp_dataset['azimuth'].append(raw_data[i,22:24])
+exp_dataset['math class'].append(raw_data[i,24])
+```
+- Синтетика `dataset_gen_final_experiment` соответствует 8‑канальному виртуальному массиву (реальные данные), тогда как `dataset_gen_final` формирует 12‑канальную синтетику (другая геометрия).  
+\n```156:160:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\dataset.py
+rx = np.linspace(0, 1.5, 4)
+tx = np.linspace(0, 2, 2)
+mimo = np.linspace(0, 3.5, 8)
+```
+- Текущее нормирование `ch = ch/max(abs(ch))` убивает абсолютные амплитуды и искажает физическую метрику; лучше RMS‑нормировка либо калибровка по каналам.  
+\n```274:276:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\dataset.py
+ch = raw_data[i, 3:11]+1j*raw_data[i, 11:19]
+ch = ch/max(abs(ch))
+```
+
+### Предобработка по статьям (краткий правильный пайплайн)
+1. **Калибровка каналов**: оценить постоянные фазовые/амплитудные ошибки на статических целях и компенсировать (иначе DOA “плывёт”).  
+2. **Подавление jamming (Wiener‑Hopf)**: оценить ковариацию помех `R` по K соседним снимкам (временное окно/соседние range‑doppler), затем применять `R^{-1}` (или `R^{-1/2}`) к вектору каналов перед DOA/NN.  
+3. **Метрика multipath из статьи**: использовать **остаток проекции**  
+`r = ||(I − P) s|| / ||s||`, `P = a(a^H a)^{-1}a^H`.  
+В `dataset.py` сейчас хранится **проекция**, а не остаток — это можно привести к единому виду (для обучения достаточно выбрать одну форму и корректный порог).  
+\n```71:76:C:\Users\User\Documents\LEMZ_project_trajectory\Shishanov_paper\dataset.py
+A = np.reshape(np.exp(1j*2*np.pi*mimo*np.sin(az_rx_mb)), [len(mimo), 1])
+A = A/np.linalg.norm(A)
+P = np.dot(A, np.conj(A.T))
+mb_metrix_mb = np.linalg.norm(np.dot(P, np.reshape(sig_mimo_mb, [len(mimo), 1]))/np.linalg.norm(sig_mimo_mb))
+```
+4. **Нормировка для NN**: комплексный вектор → два канала (Re/Im) или (amp/phase), нормировать по RMS/энергии, не по максимуму.
+
+### Корректные подходы обучения
+- **Unfolded/physics‑informed (LISTA/OPAMP)** — лучший выбор для single‑snapshot и мультипути; обучать на синтетике, дообучать на реальных.  
+- **Контрастивный Siamese** — ок для устойчивости, но только после исправления размерности/предобработки.  
+- **Covariance + Root‑MUSIC** — базовый эталон для сравнения и для генерации «псевдометок».  
+- **Классификация 1/2/multipath** — multi‑task: одна голова на класс, другая на DOA (multi‑label по двум углам).
+
+Если дадите разрешение, внесу правки: исправлю режим `train()/eval()`, форму данных в первом подходе, унифицирую метрику multipath и привяжу синтетику к 8‑канальной геометрии.
+
+==============================================================
+==============================================================
+
+[6 tools called]
+
+Продолжил, как просили: подключил `.npz` к NN‑скриптам, привёл метрику multipath к форме из статьи (остаток проекции), и добавил единый пайплайн синтетика→fine‑tune.
+
+Что сделано
+
+1) Подключение `.npz` в NN‑скрипты  
+- `NN_multipath_complex_3_classes_on_real_data.py`: добавлен `NPZ_PATH`. При указании берёт `channels` и `math_class` из `.npz`, приводит к форме `[N,8,1]`.  
+- `NN_multipath_complex_v3.py`: добавлен `NPZ_PATH` (только если 12 каналов; иначе выбрасывает ошибку, т.к. модель фиксирована на 12).
+
+2) Метрика multipath как остаток проекции  
+- В `dataset.py` добавлена функция `multipath_residual_metric` и `math_classificator` теперь по умолчанию считает multipath, когда **residual > 0.8** (как в статье).  
+- В `dataset_gen_final` и `dataset_gen_final_experiment` `mb_metrix` теперь — residual. При этом условие отбора данных остаётся прежним (по проекции), чтобы не ломать генерацию.
+
+3) Единый пайплайн обучения  
+- Новый скрипт `Shishanov_paper/train_synth_finetune.py`:  
+  - pretrain на синтетике (`dataset_gen_final_experiment`),  
+  - fine‑tune на реальных `.npz`,  
+  - сохраняет `model_3_classes_finetuned.pth`.
+
+Как использовать
+
+- Предобработать реальные данные (как раньше):
+  - `python Shishanov_paper\preprocess_real_data.py --input C:\...\train_validate\ --output C:\...\train_validate\preprocessed.npz --K 64 --normalize rms`
+- Обучение синтетика → fine‑tune:
+  - `python Shishanov_paper\train_synth_finetune.py --npz C:\...\train_validate\preprocessed.npz`
+
+Готов продолжать:  
+- если хотите — подключу `.npz` ещё и в другие блоки `study_for_paper_v1.py`,  
+- могу выровнять пороги `math_classificator` под ваши реальные метки/распределение.
+
+==============================================================
+==============================================================
+[13 tools called]
+
+Готово. Подключил `.npz` к остальным блокам в `study_for_paper_v1.py` через единый `load_real_data` с параметром `npz_path`.
+
+Что сделано
+- В начале файла добавлен `load_real_data(data_path=None, npz_path=None)`, который:
+  - читает `.npz` (ключи `channels`, `azimuth`, `math_class`, `mb_metrix`),
+  - или берёт `.txt` через `dataset_from_real_data`,
+  - приводит `channels` к форме `[N,8,1]`,
+  - переводит `azimuth` в радианы.
+- Функции реальных пайплайнов теперь принимают `npz_path`:
+  - `run_siamese_pipeline(..., npz_path=None)` (обе версии),
+  - `run_lista_pipeline(..., npz_path=None)` (реальные данные),
+  - `run_cov_recon_pipeline(..., npz_path=None)` (реальные данные),
+  - `run_hier_gru_pipeline(..., npz_path=None)` (реальные данные).
+
+Пример запуска в `study_for_paper_v1.py`
+- `run_siamese_pipeline(data_path=None, npz_path=r"C:\...\preprocessed.npz")`
+- `run_lista_pipeline(data_path=None, npz_path=r"C:\...\preprocessed.npz")`
+- `run_cov_recon_pipeline(data_path=None, npz_path=r"C:\...\preprocessed.npz")`
+- `run_hier_gru_pipeline(data_path=None, npz_path=r"C:\...\preprocessed.npz")`
+
+Линтер‑предупреждения остались прежними (complexPyTorch + “Invalid character”) — не трогал.
+
+Если нужно, могу:
+- поправить блоки, где ещё используется `load_real_data(data_path)` вне функций (тестовые ячейки),
+- унифицировать входы/выходы по всем пайплайнам (например, добавить общий `NPZ_PATH` вверху файла).
+
+==============================================================
+==============================================================
+
+[10 tools called]
+
+Готово. Подключил `.npz` во все тестовые/демо‑блоки `study_for_paper_v1.py` и унифицировал пути через глобальные переменные.
+
+Что сделано
+- Добавлены глобальные параметры:
+  - `DATA_PATH = None`
+  - `NPZ_PATH = None`
+- Все демонстрационные блоки `load_real_data(...)` теперь используют `npz_path=NPZ_PATH`.
+- Все вызовы `run_siamese_pipeline`, `run_lista_pipeline`, `run_cov_recon_pipeline`, `run_hier_gru_pipeline` внизу файла теперь передают `npz_path=NPZ_PATH`.
+- Блок просмотра `sample_file_name` корректно пропускается, если задан `NPZ_PATH`.
+
+Что нужно вам
+- Вверху файла выставить один из параметров:
+  - Для `.npz`: `NPZ_PATH = r"C:\...\preprocessed.npz"`
+  - Для `.txt`: `DATA_PATH = r"C:\...\train_validate"`
+
+Линтер‑предупреждения те же (complexPyTorch и “Invalid character”), не трогал.
+
+Если хотите, могу автоматически выставить `NPZ_PATH` на ваш путь и закомментировать `DATA_PATH`, чтобы исключить ошибки в Colab‑части.
+==============================================================
+==============================================================
+
+
+==============================================================
+==============================================================

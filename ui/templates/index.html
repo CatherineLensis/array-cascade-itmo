@@ -1,0 +1,303 @@
+{% extends "base.html" %}
+{% block title %}Главная — Array Cascade{% endblock %}
+
+{% block content %}
+
+<section class="hero">
+  <div class="panel-label blue">Один принцип, две прикладные задачи</div>
+  <h1>Универсальный подход к обработке многоканальных систем</h1>
+  <p class="hero-text">
+    Система принимает многоканальный сигнал с антенной решётки, классифицирует
+    тип сцены и при необходимости оценивает направление на источник. Один и тот
+    же принцип обработки применён к дорожной сцене (автомобильный радар TI&nbsp;AWR1843,
+    77&nbsp;ГГц) и к воздушной сцене (counter-UAV, X-диапазон 12,5&nbsp;ГГц).
+  </p>
+</section>
+
+<!-- Задача 1 -->
+<section style="margin-bottom: 16px;">
+  <div class="panel task-panel task-blue">
+    <div class="task-head">
+      <div class="task-badge blue">Задача 1</div>
+      <div>
+        <h2 style="margin-bottom: 2px;">Дорожная сцена</h2>
+        <div class="task-sub">Автомобильный радар TI&nbsp;AWR1843, 77&nbsp;ГГц</div>
+      </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="margin-top: 16px;">
+      <div class="kpi kpi-bordered blue">
+        <div class="kpi-label">Классификация сцены</div>
+        <div class="kpi-value accent">93,8&nbsp;%</div>
+        <div class="kpi-caption">accuracy на реальных данных радара, отложенная выборка</div>
+      </div>
+      <div class="kpi kpi-bordered blue">
+        <div class="kpi-label">Локализация направления</div>
+        <div class="kpi-value accent">5,23°</div>
+        <div class="kpi-caption">RMSE на синтетической валидации, один временной снимок</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Задача 2 -->
+<section style="margin-bottom: 28px;">
+  <div class="panel task-panel task-green">
+    <div class="task-head">
+      <div class="task-badge green">Задача 2</div>
+      <div>
+        <h2 style="margin-bottom: 2px;">Воздушная сцена · counter-UAV</h2>
+        <div class="task-sub">X-диапазон 12,5&nbsp;ГГц, городской многолучевой фон</div>
+      </div>
+    </div>
+    <p class="task-narr">
+      Классификатор работает на статистиках micro-Doppler по медленному времени.
+      Усреднение результата — по пяти независимым запускам.
+    </p>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-3" style="margin-top: 8px;">
+      <div class="kpi kpi-bordered green">
+        <div class="kpi-label">Различение дрона и птицы</div>
+        <div class="kpi-value green">
+          {{ "%.1f"|format(evidence.temporal_binary_acc_pct) if evidence.temporal_binary_acc_pct is not none else "—" }}&nbsp;%
+        </div>
+        <div class="kpi-caption">
+          accuracy ± {{ "%.1f"|format(evidence.temporal_binary_std_pct) if evidence.temporal_binary_std_pct is not none else "—" }}&nbsp;%
+          · macro-F1 {{ "%.1f"|format(evidence.temporal_binary_macro_f1_pct) if evidence.temporal_binary_macro_f1_pct is not none else "—" }}&nbsp;%
+        </div>
+      </div>
+      <div class="kpi kpi-bordered green">
+        <div class="kpi-label">Полная четырёхклассовая задача</div>
+        <div class="kpi-value green">
+          {{ "%.1f"|format(evidence.temporal_4class_acc_pct) if evidence.temporal_4class_acc_pct is not none else "—" }}&nbsp;%
+        </div>
+        <div class="kpi-caption">
+          accuracy ± {{ "%.1f"|format(evidence.temporal_4class_std_pct) if evidence.temporal_4class_std_pct is not none else "—" }}&nbsp;%
+          · macro-F1 {{ "%.1f"|format(evidence.temporal_4class_macro_f1_pct) if evidence.temporal_4class_macro_f1_pct is not none else "—" }}&nbsp;%
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Логика обработки -->
+<section style="margin-bottom: 28px;">
+  <div class="panel">
+    <div class="panel-label">Логика обработки</div>
+    <h2 style="margin-bottom: 18px;">Пять этапов</h2>
+    <div class="cascade-flow">
+      <div class="cascade-step">
+        <div class="cascade-num">1</div>
+        <div class="cascade-title">Входной сигнал</div>
+        <div class="cascade-text">Восемь комплексных каналов с антенной решётки</div>
+      </div>
+      <div class="cascade-arrow">→</div>
+      <div class="cascade-step">
+        <div class="cascade-num">2</div>
+        <div class="cascade-title">Подготовка</div>
+        <div class="cascade-text">Подбеливание и нормировка сигнала под физику сцены</div>
+      </div>
+      <div class="cascade-arrow">→</div>
+      <div class="cascade-step">
+        <div class="cascade-num">3</div>
+        <div class="cascade-title">Классификация</div>
+        <div class="cascade-text">Определение типа сцены</div>
+      </div>
+      <div class="cascade-arrow">→</div>
+      <div class="cascade-step">
+        <div class="cascade-num">4</div>
+        <div class="cascade-title">Маршрутизация</div>
+        <div class="cascade-text">Локализация запускается только там, где она нужна</div>
+      </div>
+      <div class="cascade-arrow">→</div>
+      <div class="cascade-step">
+        <div class="cascade-num">5</div>
+        <div class="cascade-title">Локализация</div>
+        <div class="cascade-text">Оценка направления на источник</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Аппаратные детали -->
+<section style="margin-bottom: 28px;">
+  <div class="panel panel-tight hw-panel">
+    <div class="panel-label">Аппаратная справка</div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4" style="margin-top: 8px;">
+      <div>
+        <div class="hw-title blue">Дорожная сцена</div>
+        <div class="hw-text">TI&nbsp;AWR1843, 77&nbsp;ГГц, 8-канальная антенная решётка</div>
+      </div>
+      <div>
+        <div class="hw-title amber">Воздушная сцена</div>
+        <div class="hw-text">X-диапазон 12,5&nbsp;ГГц, 8-элементная антенная решётка с шагом λ/2</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Навигация -->
+<section>
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+    <a href="/demo" class="nav-card">
+      <div class="nav-card-label blue">Демонстрация</div>
+      <div class="nav-card-title">Живой прогон каскада</div>
+      <div class="nav-card-text">
+        Запуск на одном из шести сценариев с пятью этапами визуализации
+      </div>
+      <div class="nav-card-arrow">→</div>
+    </a>
+    <a href="/methodology" class="nav-card">
+      <div class="nav-card-label blue">Методика</div>
+      <div class="nav-card-title">Один принцип, две задачи</div>
+      <div class="nav-card-text">
+        Что универсально, а что зависит от конкретной задачи
+      </div>
+      <div class="nav-card-arrow">→</div>
+    </a>
+    <a href="/counter_uav" class="nav-card">
+      <div class="nav-card-label green">Воздушная сцена</div>
+      <div class="nav-card-title">Counter-UAV в деталях</div>
+      <div class="nav-card-text">
+        Спектрограммы micro-Doppler, многолучевой фон, матрицы ошибок
+      </div>
+      <div class="nav-card-arrow">→</div>
+    </a>
+  </div>
+</section>
+
+<style>
+  .hero { margin-bottom: 32px; }
+  .hero h1 { font-size: 2.1rem; line-height: 1.15; margin: 4px 0 12px; }
+  .hero-text { max-width: 780px; font-size: 15px; line-height: 1.6; }
+
+  .task-panel {
+    padding: 22px 24px;
+    border-left: 3px solid var(--border-hi);
+    position: relative;
+  }
+  .task-panel.task-blue  { border-left-color: var(--accent); }
+  .task-panel.task-green { border-left-color: var(--positive); }
+
+  .task-head { display: flex; align-items: center; gap: 14px; }
+  .task-badge {
+    flex-shrink: 0;
+    font-family: var(--kpi-num-font);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 4px;
+  }
+  .task-badge.blue  { background: rgba(91, 141, 239, 0.16); color: var(--accent); }
+  .task-badge.green { background: rgba(76, 175, 133, 0.16); color: var(--positive); }
+  .task-sub { font-size: 12px; color: var(--text-3); }
+  .task-narr {
+    font-size: 13px;
+    color: var(--text-2);
+    margin: 12px 0 4px;
+  }
+
+  .kpi-bordered { border-left: 3px solid var(--border-hi); }
+  .kpi-bordered.blue  { border-left-color: var(--accent); }
+  .kpi-bordered.green { border-left-color: var(--positive); }
+
+  .hw-panel { background: linear-gradient(180deg, var(--panel) 0%, var(--bg-soft) 100%); }
+  .hw-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+  .hw-title.blue  { color: var(--accent); }
+  .hw-title.amber { color: var(--caveat); }
+  .hw-text { font-size: 14px; color: var(--text-2); }
+
+  .cascade-flow {
+    display: flex;
+    align-items: stretch;
+    gap: 6px;
+    overflow-x: auto;
+    padding: 2px 0;
+  }
+  .cascade-step {
+    flex: 1 1 0;
+    min-width: 140px;
+    background: linear-gradient(180deg, var(--bg-soft) 0%, var(--panel-alt) 100%);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 14px;
+  }
+  .cascade-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent) 0%, #6e9af0 100%);
+    color: #0b1224;
+    font-family: var(--kpi-num-font);
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    box-shadow: 0 0 0 3px rgba(91, 141, 239, 0.12);
+  }
+  .cascade-title { font-weight: 600; color: var(--text); font-size: 13px; margin-bottom: 4px; }
+  .cascade-text  { font-size: 12px; color: var(--text-3); line-height: 1.45; }
+  .cascade-arrow {
+    display: flex;
+    align-items: center;
+    color: var(--accent);
+    font-size: 18px;
+    padding: 0 4px;
+    opacity: 0.6;
+  }
+
+  .nav-card {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    transition: border-color .15s, transform .15s, box-shadow .15s;
+    position: relative;
+    min-height: 132px;
+  }
+  .nav-card:hover {
+    border-color: var(--border-hi);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.32);
+    text-decoration: none;
+  }
+  .nav-card-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .nav-card-label.blue  { color: var(--accent); }
+  .nav-card-label.green { color: var(--positive); }
+  .nav-card-title { font-size: 16px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .nav-card-text  { font-size: 13px; color: var(--text-3); line-height: 1.45; }
+  .nav-card-arrow {
+    position: absolute;
+    right: 18px;
+    bottom: 14px;
+    color: var(--text-3);
+    font-size: 18px;
+    opacity: 0.5;
+    transition: transform .15s, opacity .15s, color .15s;
+  }
+  .nav-card:hover .nav-card-arrow { color: var(--accent); opacity: 1; transform: translateX(3px); }
+
+  @media (max-width: 760px) {
+    .cascade-flow { flex-direction: column; }
+    .cascade-arrow { transform: rotate(90deg); padding: 0; opacity: 0.4; }
+  }
+</style>
+
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}О проекте — Array Cascade{% endblock %}
+
+{% block content %}
+
+<section style="margin-bottom: 24px;">
+  <div class="panel-label blue">Заявка ИТМО · текст проекта</div>
+  <h1>О проекте</h1>
+  <p style="max-width: 760px;">
+    Ниже — полный текст заявки в магистратуру ИТМО. Содержит позиционирование
+    проекта, научную новизну, методику, ожидаемые результаты, ресурсы и риски.
+  </p>
+</section>
+
+{% if application_text %}
+<section class="panel" style="margin-bottom: 24px;">
+  <div class="panel-label">Содержание</div>
+  <div id="toc" style="font-size: 14px;">
+    <!-- Заполняется JS после рендера markdown -->
+  </div>
+</section>
+
+<article class="panel">
+  <div id="prose" class="prose"></div>
+</article>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.0/marked.min.js"></script>
+<script>
+  (function () {
+    const rawMd = {{ application_text | tojson }};
+    const target = document.getElementById('prose');
+    const tocTarget = document.getElementById('toc');
+
+    if (typeof marked !== 'undefined') {
+      marked.setOptions({ gfm: true, breaks: false });
+      target.innerHTML = marked.parse(rawMd);
+    } else {
+      target.textContent = rawMd;
+    }
+
+    const headings = target.querySelectorAll('h2');
+    if (!headings.length) {
+      tocTarget.parentElement.style.display = 'none';
+      return;
+    }
+
+    const items = [];
+    headings.forEach((h, i) => {
+      const slug = 'sec-' + i;
+      h.id = slug;
+      items.push(`<a href="#${slug}" style="display: block; padding: 3px 0; color: var(--text-2);">${h.textContent}</a>`);
+    });
+    tocTarget.innerHTML = items.join('');
+  })();
+</script>
+{% else %}
+<section class="panel">
+  <div class="note">
+    Файл заявки <code>docs/ITMO_application/application_text.md</code> не найден.
+  </div>
+</section>
+{% endif %}
+
+{% endblock %}

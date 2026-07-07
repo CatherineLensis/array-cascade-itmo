@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+{% block title %}Демонстрация — Array Cascade{% endblock %}
+
+{% block content %}
+
+<div x-data="demoApp()" x-init="init()">
+
+  <section style="margin-bottom: 24px;">
+    <div class="panel-label blue">Демонстрация</div>
+    <h1>Живой прогон каскада</h1>
+    <p style="max-width: 760px;">
+      Каскад выполняется на одном из шести сценариев. Видны все пять этапов:
+      входной сигнал, представление после подготовки, распределение классов,
+      спектр направления и численные метрики.
+    </p>
+  </section>
+
+  <!-- Управление -->
+  <div class="panel" style="margin-bottom: 16px;">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div>
+        <label class="field" for="sel-domain">Сцена</label>
+        <select id="sel-domain" x-model="domain" @change="onDomainChange()">
+          <option value="automotive">Дорожная (TI AWR1843, 77 ГГц)</option>
+          <option value="counter_uav">Воздушная (X-диапазон 12,5 ГГц)</option>
+        </select>
+      </div>
+      <div>
+        <label class="field" for="sel-preset">Сценарий</label>
+        <select id="sel-preset" x-model="preset" @change="runCascade()">
+          <template x-if="domain === 'automotive'">
+            <optgroup label="Дорожная сцена">
+              <option value="a1">Одиночная прямая цель на +15°</option>
+              <option value="a2">Прямой луч и переотражение</option>
+              <option value="a3">Две цели одновременно</option>
+            </optgroup>
+          </template>
+          <template x-if="domain === 'counter_uav'">
+            <optgroup label="Воздушная сцена">
+              <option value="u1">Квадрокоптер на +30°</option>
+              <option value="u2">Птица на −20°</option>
+              <option value="u3">Дрон и птица одновременно</option>
+            </optgroup>
+          </template>
+        </select>
+      </div>
+      <div>
+        <label class="field">SNR&nbsp;(дБ): <span class="mono" x-text="snr"></span></label>
+        <input type="range" x-model.number="snr" min="-5" max="30" step="1" @input="onSnrChange()">
+      </div>
+    </div>
+    <div style="display: flex; align-items: center; gap: 12px; margin-top: 14px;">
+      <button class="btn btn-primary" @click="runCascade()" :disabled="loading">
+        <span x-show="!loading">Запустить каскад</span>
+        <span x-show="loading">Идёт расчёт…</span>
+      </button>
+      <span style="font-size: 13px; color: var(--text-3);" x-text="status"></span>
+    </div>
+  </div>
+
+
+  <!-- Сводка результата -->
+  <div class="grid grid-cols-2 md:grid-cols-4 gap-3" style="margin-bottom: 18px;">
+    <template x-for="item in summaryItems" :key="item.label">
+      <div class="kpi">
+        <div class="kpi-label" x-text="item.label"></div>
+        <div class="kpi-value" :class="item.accent" x-text="item.value"></div>
+        <div class="kpi-caption" x-text="item.hint"></div>
+      </div>
+    </template>
+  </div>
+
+  <!-- Этап 1 -->
+  <div class="panel panel-tight" style="margin-bottom: 14px;">
+    <div class="panel-label">Этап 1 · Входной сигнал</div>
+    <div id="plot-raw" style="min-height: 260px;"></div>
+  </div>
+
+  <!-- Этап 2 -->
+  <div class="panel panel-tight" style="margin-bottom: 14px;">
+    <div class="panel-label">Этап 2 · Сигнал после подготовки</div>
+    <div id="plot-white" style="min-height: 260px;"></div>
+  </div>
+
+  <!-- Этап 3 -->
+  <div class="panel panel-tight" style="margin-bottom: 14px;">
+    <div class="panel-label">Этап 3 · Классификация сцены</div>
+    <div id="plot-clf" style="min-height: 200px;"></div>
+  </div>
+
+  <!-- Этап 4 -->
+  <div class="panel panel-tight" style="margin-bottom: 14px;">
+    <div class="panel-label">Этап 4 · Локализация направления</div>
+    <div id="plot-doa" style="min-height: 320px;"></div>
+  </div>
+
+  <!-- Этап 5 -->
+  <div class="panel" style="margin-bottom: 14px;">
+    <div class="panel-label">Этап 5 · Численные метрики</div>
+    <pre x-text="metricsText"
+         style="font-size: 12px; background: var(--bg-soft); border: 1px solid var(--border);
+                border-radius: 6px; padding: 12px; margin: 0; color: var(--text-2);
+                overflow-x: auto; white-space: pre-wrap;"></pre>
+  </div>
+</div>
+
+<script>
+function demoApp() {
+  return {
+    domain: 'automotive',
+    preset: 'a1',
+    snr: 15,
+    loading: false,
+    status: 'инициализация…',
+    metricsText: '—',
+    snrDebounce: null,
+
+    summaryItems: [
+      {label: 'Режим', value: '—', hint: 'живой ML или физический резерв', accent: ''},
+      {label: 'Класс сцены', value: '—', hint: 'предсказание классификатора', accent: ''},
+      {label: 'Задержка', value: '—', hint: 'время одного прогона', accent: ''},
+      {label: 'Ошибка локализации', value: '—', hint: 'только для сценариев с известным углом', accent: ''},
+    ],
+
+    init() {
+      this.runCascade();
+    },
+
+    onDomainChange() {
+      this.preset = this.domain === 'automotive' ? 'a1' : 'u1';
+      this.runCascade();
+    },
+
+    onSnrChange() {
+      if (this.snrDebounce) clearTimeout(this.snrDebounce);
+      this.snrDebounce = setTimeout(() => this.runCascade(), 220);
+    },
+
+    async runCascade() {
+      this.loading = true;
+      this.status = 'идёт инференс…';
+      try {
+        const resp = await fetch('/api/run_cascade', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({domain: this.domain, preset: this.preset, snr: this.snr})
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+
+        Plotly.react('plot-raw',   data.raw_signal_fig.data,      data.raw_signal_fig.layout,      {responsive: true, displaylogo: false});
+        Plotly.react('plot-white', data.whitened_signal_fig.data, data.whitened_signal_fig.layout, {responsive: true, displaylogo: false});
+        if (data.classifier_fig)
+          Plotly.react('plot-clf', data.classifier_fig.data, data.classifier_fig.layout, {responsive: true, displaylogo: false});
+        if (data.doa_fig)
+          Plotly.react('plot-doa', data.doa_fig.data, data.doa_fig.layout, {responsive: true, displaylogo: false});
+
+        const errDeg = data.metrics?.error_deg;
+        const errStr = (typeof errDeg === 'number' && errDeg >= 0)
+          ? errDeg.toFixed(2) + '°'
+          : 'нет ground truth';
+
+        this.summaryItems = [
+          {label: 'Режим',              value: data.mode === 'live' ? 'живой ML' : 'физический резерв',
+                                        hint: 'источник предсказания',
+                                        accent: data.mode === 'live' ? 'accent' : 'amber'},
+          {label: 'Класс сцены',        value: data.classifier_label || '—',
+                                        hint: 'предсказание классификатора',
+                                        accent: ''},
+          {label: 'Задержка',           value: (data.metrics?.latency_ms?.toFixed(1) ?? '?') + ' мс',
+                                        hint: 'время одного прогона',
+                                        accent: ''},
+          {label: 'Ошибка локализации', value: errStr,
+                                        hint: 'разница с истинным углом, если он задан',
+                                        accent: (typeof errDeg === 'number' && errDeg > 0 && errDeg <= 3) ? 'green' : ''},
+        ];
+        this.metricsText = JSON.stringify(data.metrics, null, 2);
+        this.status = 'готово · ' + (data.metrics?.latency_ms?.toFixed(1) ?? '?') + ' мс';
+      } catch (e) {
+        this.status = 'ошибка: ' + e.message;
+        this.metricsText = 'ошибка запроса';
+      } finally {
+        this.loading = false;
+      }
+    }
+  }
+}
+</script>
+
+{% endblock %}

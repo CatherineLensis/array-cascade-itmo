@@ -1,0 +1,43 @@
+# Generated outputs
+output/
+output_*/
+*.npz
+*.pth
+*.pt
+*.onnx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.venv/
+venv/
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.swp
+
+# Notebooks
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Runtime logs (не в git)
+logs/
+
+# UI runtime
+ui/static/plotly_charts/*.html
+!ui/static/plotly_charts/.gitkeep
+
+CHANGELOG.md
+STAGES.md
+SPEC_ITMO_V2.md
+project_shishanov_paper_itmo.md
+.git_backup_do_not_push/
+.git_backup_do_not_push_2/
+ITMO_application_package/

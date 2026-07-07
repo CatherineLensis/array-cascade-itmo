@@ -1,0 +1,28 @@
+Все скрипты готовы, без ошибок. Вот итог:
+
+---
+
+## Создано: `analysis/` — 4 научных исследования
+
+| # | Скрипт | Вопрос | Что генерирует |
+|---|--------|--------|----------------|
+| 1 | `cascade_error.py` | Что является bottleneck — классификатор или DOA? | Oracle vs Pipeline RMSE, breakdown по правильной/ошибочной классификации, типы ошибок |
+| 2 | `angular_resolution.py` | При каком минимальном Δθ различимы 2 цели? | Кривая Success Rate vs Δθ, Δθ_min@50%/90%, сравнение с Rayleigh limit (~12.7° для 8-el ULA) |
+| 3 | `snr_analysis.py` | Как деградирует система при снижении SNR? | Accuracy vs SNR, RMSE vs SNR, SR@3° vs SNR, минимальный рабочий SNR |
+| 4 | `inference_benchmark.py` | Реально ли работать в реальном времени? | Латентность (mean/p95/p99), throughput, batch scaling, размер моделей |
+
+### Порядок запуска:
+
+```bash
+# Сначала должен быть обучен пайплайн:
+python prepare_data.py
+python run_full_pipeline.py
+
+# Затем анализы (по порядку от самого важного):
+python analysis/cascade_error.py
+python analysis/angular_resolution.py
+python analysis/snr_analysis.py
+python analysis/inference_benchmark.py
+```
+
+Все графики сохраняются в `output/analysis/`. README обновлён.
